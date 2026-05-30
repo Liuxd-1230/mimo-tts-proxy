@@ -190,22 +190,23 @@ async def call_mimo_tts(
     # assistant message: 要合成的文本（必填）
     messages.append({"role": "assistant", "content": assistant_content})
 
-    # 音色 ID
-    voice_id = VOICE_NAME_MAP.get(voice, voice)
-
     url = f"{host.rstrip('/')}/v1/chat/completions"
     headers = {
         "Content-Type": "application/json",
         "api-key": key,
         "Authorization": f"Bearer {key}",
     }
+
+    # audio 参数：voicedesign 不传 voice，只传 format
+    audio_obj = {"format": audio_format}
+    if not is_voicedesign:
+        voice_id = VOICE_NAME_MAP.get(voice, voice)
+        audio_obj["voice"] = voice_id
+
     payload = {
         "model": mdl,
         "messages": messages,
-        "audio": {
-            "format": audio_format,
-            "voice": voice_id,
-        },
+        "audio": audio_obj,
     }
 
     async with httpx.AsyncClient(timeout=60) as client:
