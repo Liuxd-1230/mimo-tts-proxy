@@ -196,7 +196,9 @@ textarea.neu-input{resize:vertical;min-height:72px;font-family:inherit;line-heig
       </div>
       <div class="form-group">
         <label>模型</label>
-        <input type="text" id="model" class="neu-input" value="mimo-v2.5-tts">
+        <select id="model" class="neu-select">
+          <option value="mimo-v2.5-tts" selected>mimo-v2.5-tts</option>
+        </select>
       </div>
     </div>
     <div class="btn-group">
@@ -254,7 +256,7 @@ textarea.neu-input{resize:vertical;min-height:72px;font-family:inherit;line-heig
     <div style="margin-top:12px;font-size:12px;color:var(--text3);line-height:1.8">
       <i class="ri-checkbox-circle-line" style="color:var(--green)"></i> 酒馆 TTS → OpenAI Compatible<br>
       <i class="ri-checkbox-circle-line" style="color:var(--green)"></i> Endpoint 填上面地址<br>
-      <i class="ri-checkbox-circle-line" style="color:var(--green)"></i> Model 填 <code>mimo-tts-01</code><br>
+      <i class="ri-checkbox-circle-line" style="color:var(--green)"></i> Model 填 <code>mimo-v2.5-tts</code><br>
       <i class="ri-checkbox-circle-line" style="color:var(--green)"></i> Voice 填音色名（如 <code>冰糖</code>）<br>
       <i class="ri-checkbox-circle-line" style="color:var(--green)"></i> API Key 留空
     </div>
@@ -303,7 +305,7 @@ async function init(){
 
   document.getElementById('apiKey').value='';
   document.getElementById('apiHost').value=cfg.api_host||'https://api.xiaomimimo.com';
-  document.getElementById('model').value=cfg.model||'mimo-tts-01';
+  document.getElementById('model').value=cfg.model||'mimo-v2.5-tts';
   document.getElementById('listenLan').checked=cfg.listen_lan||false;
   document.getElementById('port').value=cfg.port||5120;
   if(cfg.api_key_masked) document.getElementById('apiKey').placeholder=cfg.api_key_masked;

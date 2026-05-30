@@ -103,7 +103,7 @@ def save_config():
 class TTSRequest(BaseModel):
     """OpenAI 兼容的 TTS 请求体"""
 
-    model: str = "mimo-tts-01"
+    model: str = "mimo-v2.5-tts"
     voice: str = "冰糖"
     input: str = ""
     response_format: str = "wav"
@@ -138,14 +138,14 @@ async def call_mimo_tts(
     text: str,
     voice: str = "冰糖",
     instruction: str = "",
-    model: str = "mimo-tts-01",
+    model: str = "mimo-v2.5-tts",
     api_host: str = "",
     api_key: str = "",
 ) -> bytes:
     """调用 MiMo TTS API，返回音频 bytes"""
     host = api_host or config.get("api_host", "https://api.xiaomimimo.com")
     key = api_key or config.get("api_key", "")
-    mdl = model or config.get("model", "mimo-tts-01")
+    mdl = model or config.get("model", "mimo-v2.5-tts")
 
     if not key:
         raise HTTPException(status_code=400, detail="未配置 API Key")
