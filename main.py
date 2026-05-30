@@ -1,21 +1,22 @@
 """
 MiMo TTS Proxy Server
-独立的 TTS API 中转服务，提供 WebUI 管理界面和 OpenAI 兼容 API 端点。
+基于小米 MiMo 官方 API 文档实现。
+https://platform.xiaomimimo.com/static/docs/usage-guide/speech-synthesis-v2.5.md
 """
 
 import os
 import json
 import base64
-import asyncio
+import threading
 from pathlib import Path
 from typing import Optional
 
 import httpx
 import uvicorn
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import Response, HTMLResponse
+from fastapi.responses import Response, HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 # ── 配置 ──────────────────────────────────────────────
 
@@ -26,56 +27,57 @@ DEFAULT_CONFIG = {
     "api_host": "https://api.xiaomimimo.com",
     "api_key": "",
     "model": "mimo-v2.5-tts",
-    "default_voice": "冰糖",
-    "voice_design_mode": "",
-    "voice_design_instruction": "",
+    "voice": "冰糖",
+    "audio_format": "wav",
     "listen_lan": False,
     "port": 5120,
 }
 
-# ── 内置音色 ──────────────────────────────────────────
+# ── 内置音色（官方文档）───────────────────────────────
 
 BUILTIN_VOICES = [
-    {"name": "冰糖", "id": "bingtang", "lang": "zh-CN"},
-    {"name": "茉莉", "id": "moli", "lang": "zh-CN"},
-    {"name": "知性的姐姐", "id": "zhixing", "lang": "zh-CN"},
-    {"name": "甜心少女", "id": "tianxin", "lang": "zh-CN"},
-    {"name": "阳光青年", "id": "yangguang", "lang": "zh-CN"},
-    {"name": "活泼小女", "id": "huopo", "lang": "zh-CN"},
-    {"name": "御姐", "id": "yujie", "lang": "zh-CN"},
-    {"name": "温柔小姨", "id": "wenrou", "lang": "zh-CN"},
-    {"name": "儿语姐姐", "id": "eryu", "lang": "zh-CN"},
-    {"name": "酷拽学姐", "id": "kuzhuai", "lang": "zh-CN"},
+    {"name": "冰糖", "id": "冰糖", "lang": "zh-CN", "gender": "female"},
+    {"name": "茉莉", "id": "茉莉", "lang": "zh-CN", "gender": "female"},
+    {"name": "苏打", "id": "苏打", "lang": "zh-CN", "gender": "male"},
+    {"name": "白桦", "id": "白桦", "lang": "zh-CN", "gender": "male"},
+    {"name": "Mia", "id": "Mia", "lang": "en-US", "gender": "female"},
+    {"name": "Chloe", "id": "Chloe", "lang": "en-US", "gender": "female"},
+    {"name": "Milo", "id": "Milo", "lang": "en-US", "gender": "male"},
+    {"name": "Dean", "id": "Dean", "lang": "en-US", "gender": "male"},
 ]
 
-VOICE_DESIGN_PRESETS = [
-    {"name": "动画配音", "instruction": "声音夸张活泼，情绪饱满，有动漫角色的表演感"},
-    {"name": "播客讲述", "instruction": "自然轻松，语速适中，像朋友聊天一样娓娓道来"},
-    {"name": "温柔安抚", "instruction": "声音轻柔温暖，语速偏慢，像在哄人入睡"},
-    {"name": "阳光开朗", "instruction": "声音明亮有活力，带着微笑的语气"},
-    {"name": "新闻播报", "instruction": "字正腔圆，语速均匀，严肃正式的播音腔"},
-    {"name": "恐怖故事", "instruction": "低沉压抑，偶尔压低声音制造悬念感"},
+# ── 模型列表（官方文档）───────────────────────────────
+
+MODELS = [
+    {"id": "mimo-v2.5-tts", "name": "内置音色 TTS", "desc": "使用高质量内置音色合成语音，支持唱歌、风格控制", "supports_voice_design": False},
+    {"id": "mimo-v2.5-tts-voicedesign", "name": "语音设计 TTS", "desc": "通过文字描述自定义声音，无需预设或音频样本", "supports_voice_design": True},
+]
+
+# ── 风格标签预设（官方文档支持的标签）──────────────────
+
+STYLE_PRESETS = [
+    {"name": "开心", "tag": "开心", "category": "基础情感"},
+    {"name": "悲伤", "tag": "悲伤", "category": "基础情感"},
+    {"name": "愤怒", "tag": "愤怒", "category": "基础情感"},
+    {"name": "温柔", "tag": "温柔", "category": "整体基调"},
+    {"name": "冷酷", "tag": "冷酷", "category": "整体基调"},
+    {"name": "活泼", "tag": "活泼", "category": "整体基调"},
+    {"name": "磁性", "tag": "磁性", "category": "音色定位"},
+    {"name": "甜美", "tag": "甜美", "category": "音色定位"},
+    {"name": "撒娇", "tag": "撒娇", "category": "角色声线"},
+    {"name": "叹气", "tag": "叹气", "category": "语音特征"},
+    {"name": "微笑", "tag": "微笑", "category": "笑哭语气"},
+    {"name": "唱歌", "tag": "唱歌", "category": "特殊"},
 ]
 
 # ── App ───────────────────────────────────────────────
 
-app = FastAPI(title="MiMo TTS Proxy", version="1.0.0")
+app = FastAPI(title="MiMo TTS Proxy", version="2.0.0")
 
-# 静态文件
 STATIC_DIR = Path(__file__).parent / "static"
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
-
-@app.get("/favicon.ico")
-async def favicon():
-    from fastapi.responses import FileResponse
-    icon = STATIC_DIR / "favicon.ico"
-    if icon.exists():
-        return FileResponse(icon)
-    return Response(status_code=204)
-
-# 全局配置
 config: dict = {}
 
 
@@ -110,12 +112,15 @@ class TTSRequest(BaseModel):
     speed: float = 1.0
 
 
-class VoiceDesignRequest(BaseModel):
-    """语音设计请求"""
+class PreviewRequest(BaseModel):
+    """预览请求"""
 
     text: str = "你好，这是一段测试语音。"
     voice: str = "冰糖"
-    instruction: str = ""
+    model: str = "mimo-v2.5-tts"
+    style_tags: list[str] = []
+    style_instruction: str = ""
+    voice_design_description: str = ""
 
 
 class ConfigUpdate(BaseModel):
@@ -124,25 +129,36 @@ class ConfigUpdate(BaseModel):
     api_host: Optional[str] = None
     api_key: Optional[str] = None
     model: Optional[str] = None
-    default_voice: Optional[str] = None
-    voice_design_mode: Optional[str] = None
-    voice_design_instruction: Optional[str] = None
+    voice: Optional[str] = None
+    audio_format: Optional[str] = None
     listen_lan: Optional[bool] = None
     port: Optional[int] = None
 
 
 # ── MiMo API 调用 ────────────────────────────────────
 
+# 官方音色名 → ID 映射（有些音色名就是 ID）
+VOICE_NAME_MAP = {v["name"]: v["id"] for v in BUILTIN_VOICES}
+
 
 async def call_mimo_tts(
     text: str,
     voice: str = "冰糖",
-    instruction: str = "",
     model: str = "mimo-v2.5-tts",
+    style_tags: list[str] = None,
+    style_instruction: str = "",
     api_host: str = "",
     api_key: str = "",
+    audio_format: str = "wav",
 ) -> bytes:
-    """调用 MiMo TTS API，返回音频 bytes"""
+    """
+    调用 MiMo TTS API。
+
+    官方 API 格式：
+    - user role: 风格指令（可选，内置音色时）/ 声音描述（必填，语音设计时）
+    - assistant role: 要合成的文本
+    - audio.voice: 音色 ID
+    """
     host = api_host or config.get("api_host", "https://api.xiaomimimo.com")
     key = api_key or config.get("api_key", "")
     mdl = model or config.get("model", "mimo-v2.5-tts")
@@ -150,15 +166,32 @@ async def call_mimo_tts(
     if not key:
         raise HTTPException(status_code=400, detail="未配置 API Key")
 
-    # 构建消息
-    system_content = f"Voice Name: {voice}"
-    if instruction:
-        system_content += f"\n{instruction}"
+    # 构建 assistant content（要合成的文本）
+    assistant_content = text
 
-    messages = [
-        {"role": "system", "content": system_content},
-        {"role": "user", "content": text},
-    ]
+    # 如果有风格标签，加到文本前面
+    if style_tags:
+        tags_str = " ".join(f"({t})" for t in style_tags)
+        assistant_content = f"{tags_str}{text}"
+
+    # 构建 messages
+    messages = []
+
+    # user message: 风格指令或语音设计描述
+    is_voicedesign = "voicedesign" in mdl
+    if is_voicedesign:
+        # voicedesign 模型：user 消息是声音描述（必填）
+        desc = style_instruction or "一个自然流畅的声音"
+        messages.append({"role": "user", "content": desc})
+    elif style_instruction:
+        # 内置音色模型：user 消息是风格指令（可选）
+        messages.append({"role": "user", "content": style_instruction})
+
+    # assistant message: 要合成的文本（必填）
+    messages.append({"role": "assistant", "content": assistant_content})
+
+    # 音色 ID
+    voice_id = VOICE_NAME_MAP.get(voice, voice)
 
     url = f"{host.rstrip('/')}/v1/chat/completions"
     headers = {
@@ -166,7 +199,14 @@ async def call_mimo_tts(
         "api-key": key,
         "Authorization": f"Bearer {key}",
     }
-    payload = {"model": mdl, "messages": messages}
+    payload = {
+        "model": mdl,
+        "messages": messages,
+        "audio": {
+            "format": audio_format,
+            "voice": voice_id,
+        },
+    }
 
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.post(url, json=payload, headers=headers)
@@ -181,7 +221,10 @@ async def call_mimo_tts(
     try:
         audio_b64 = data["choices"][0]["message"]["audio"]["data"]
     except (KeyError, IndexError):
-        raise HTTPException(status_code=500, detail=f"响应格式异常: {json.dumps(data, ensure_ascii=False)[:500]}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"响应格式异常: {json.dumps(data, ensure_ascii=False)[:500]}",
+        )
 
     return base64.b64decode(audio_b64)
 
@@ -191,21 +234,25 @@ async def call_mimo_tts(
 
 @app.get("/")
 async def index():
-    """WebUI 主页"""
     html_file = STATIC_DIR / "index.html"
     if html_file.exists():
         return HTMLResponse(html_file.read_text(encoding="utf-8"))
-    return HTMLResponse("<h1>MiMo TTS Proxy</h1><p>static/index.html not found</p>")
+    return HTMLResponse("<h1>MiMo TTS Proxy</h1>")
+
+
+@app.get("/favicon.ico")
+async def favicon():
+    icon = STATIC_DIR / "favicon.ico"
+    if icon.exists():
+        return FileResponse(icon)
+    return Response(status_code=204)
 
 
 @app.get("/v1/models")
 async def list_models():
-    """OpenAI 兼容：列出模型"""
     return {
         "object": "list",
-        "data": [
-            {"id": "mimo-v2.5-tts", "object": "model", "owned_by": "xiaomi"},
-        ],
+        "data": [{"id": m["id"], "object": "model", "owned_by": "xiaomi"} for m in MODELS],
     }
 
 
@@ -215,40 +262,24 @@ async def openai_compatible_tts(req: TTSRequest):
     if not req.input:
         raise HTTPException(status_code=400, detail="input 不能为空")
 
-    # 检查是否是语音设计模式的 voice
-    voice = req.voice
-    instruction = ""
-
-    # 如果 voice 是预设名称，查找对应指令
-    for preset in VOICE_DESIGN_PRESETS:
-        if voice.startswith(preset["name"] + ":"):
-            instruction = voice[len(preset["name"]) + 1 :].strip()
-            voice = config.get("default_voice", "冰糖")
-            break
-
-    # 如果配置了全局语音设计
-    if not instruction and config.get("voice_design_mode"):
-        if config["voice_design_mode"] == "custom":
-            instruction = config.get("voice_design_instruction", "")
-        else:
-            for preset in VOICE_DESIGN_PRESETS:
-                if preset["name"] == config["voice_design_mode"]:
-                    instruction = preset["instruction"]
-                    break
+    # 从配置读取风格设置
+    style_tags = []
+    style_instruction = ""
 
     audio_bytes = await call_mimo_tts(
         text=req.input,
-        voice=voice,
-        instruction=instruction,
+        voice=req.voice,
         model=req.model,
+        style_tags=style_tags,
+        style_instruction=style_instruction,
+        audio_format=req.response_format or config.get("audio_format", "wav"),
     )
 
-    # 根据请求格式返回
     media_type = "audio/wav"
     if req.response_format == "mp3":
         media_type = "audio/mpeg"
-    elif req.response_format == "opus":
-        media_type = "audio/ogg"
+    elif req.response_format == "pcm16":
+        media_type = "audio/pcm"
 
     return Response(content=audio_bytes, media_type=media_type)
 
@@ -258,7 +289,6 @@ async def openai_compatible_tts(req: TTSRequest):
 
 @app.get("/api/config")
 async def get_config():
-    """获取当前配置（隐藏 API Key）"""
     safe = config.copy()
     if safe.get("api_key"):
         key = safe["api_key"]
@@ -270,7 +300,6 @@ async def get_config():
 
 @app.post("/api/config")
 async def update_config(update: ConfigUpdate):
-    """更新配置"""
     for field, value in update.model_dump(exclude_none=True).items():
         config[field] = value
     save_config()
@@ -279,28 +308,36 @@ async def update_config(update: ConfigUpdate):
 
 @app.get("/api/voices")
 async def list_voices():
-    """列出所有音色"""
-    return {"voices": BUILTIN_VOICES, "design_presets": VOICE_DESIGN_PRESETS}
+    return {
+        "voices": BUILTIN_VOICES,
+        "models": MODELS,
+        "style_presets": STYLE_PRESETS,
+    }
 
 
 @app.post("/api/preview")
-async def preview_voice(req: VoiceDesignRequest):
+async def preview_voice(req: PreviewRequest):
     """预览音色（返回音频流）"""
     audio_bytes = await call_mimo_tts(
         text=req.text,
         voice=req.voice,
-        instruction=req.instruction,
+        model=req.model,
+        style_tags=req.style_tags,
+        style_instruction=req.style_instruction,
     )
     return Response(content=audio_bytes, media_type="audio/wav")
 
 
 @app.get("/api/test")
 async def test_connection():
-    """测试 API 连接"""
     if not config.get("api_key"):
         return {"ok": False, "error": "未配置 API Key"}
     try:
-        audio = await call_mimo_tts(text="测试连接", voice="冰糖")
+        audio = await call_mimo_tts(
+            text="你好，我是小米的语音助手。",
+            voice="冰糖",
+            model="mimo-v2.5-tts",
+        )
         return {"ok": True, "size": len(audio)}
     except Exception as e:
         return {"ok": False, "error": str(e)}
@@ -308,18 +345,14 @@ async def test_connection():
 
 @app.post("/api/restart")
 async def restart_server():
-    """重启服务（通过重新执行当前进程）"""
     import sys
-    import os
-
     save_config()
-    # 延迟重启，让响应先返回
+
     def do_restart():
         import time
         time.sleep(0.5)
         os.execv(sys.executable, [sys.executable] + sys.argv)
 
-    import threading
     threading.Thread(target=do_restart, daemon=True).start()
     return {"ok": True, "message": "正在重启..."}
 
@@ -331,7 +364,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="MiMo TTS Proxy Server")
     parser.add_argument("--port", type=int, default=None, help="监听端口")
-    parser.add_argument("--lan", action="store_true", default=None, help="启用局域网监听 (0.0.0.0)")
+    parser.add_argument("--lan", action="store_true", default=None, help="启用局域网监听")
     parser.add_argument("--host", type=str, default=None, help="监听地址")
     args = parser.parse_args()
 
