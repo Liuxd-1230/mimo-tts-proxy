@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MiMo TTS Proxy</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d0d1a;--bg2:#13132a;--bg3:#1a1a2e;--bg4:#222244;
+  --accent:#6c63ff;--accent2:#8b7dff;--accent-glow:rgba(108,99,255,.25);
+  --text:#e8e8f0;--text2:#a0a0c0;--text3:#666688;
+  --border:#2a2a4a;--border2:#333366;
+  --green:#22c55e;--red:#ef4444;--orange:#f59e0b;
+  --radius:12px;--radius-sm:8px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+::selection{background:var(--accent);color:#fff}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* Layout */
+.app{max-width:960px;margin:0 auto;padding:24px 20px}
+.header{display:flex;align-items:center;gap:14px;margin-bottom:32px}
+.header .logo{width:42px;height:42px;border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),#9b59b6);
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+  box-shadow:0 4px 20px var(--accent-glow)}
+.header h1{font-size:22px;font-weight:700;letter-spacing:-.5px}
+.header p{font-size:13px;color:var(--text2);margin-top:2px}
+
+/* Cards */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:24px;margin-bottom:20px;transition:border-color .2s}
+.card:hover{border-color:var(--border2)}
+.card-title{font-size:15px;font-weight:600;margin-bottom:16px;
+  display:flex;align-items:center;gap:8px}
+.card-title .icon{width:28px;height:28px;border-radius:var(--radius-sm);
+  background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px}
+
+/* Form elements */
+label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px;font-weight:500}
+input[type=text],input[type=password],textarea,select{
+  width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text);font-size:14px;
+  transition:border-color .2s,box-shadow .2s;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-glow)}
+textarea{resize:vertical;min-height:80px;font-family:inherit}
+select{cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23a0a0c0'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;
+  padding-right:32px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;
+  border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;
+  cursor:pointer;transition:all .2s}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2);box-shadow:0 4px 16px var(--accent-glow)}
+.btn-secondary{background:var(--bg4);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+.btn-sm{padding:6px 14px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* Status */
+.status-bar{display:flex;align-items:center;gap:10px;padding:12px 16px;
+  background:var(--bg3);border-radius:var(--radius-sm);margin-bottom:20px}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.status-dot.ok{background:var(--green);box-shadow:0 0 8px rgba(34,197,94,.5)}
+.status-dot.err{background:var(--red);box-shadow:0 0 8px rgba(239,68,68,.5)}
+.status-dot.off{background:var(--text3)}
+.status-text{font-size:13px;color:var(--text2)}
+
+/* Voice grid */
+.voice-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.voice-card{padding:14px;background:var(--bg);border:2px solid var(--border);
+  border-radius:var(--radius-sm);cursor:pointer;transition:all .2s;text-align:center}
+.voice-card:hover{border-color:var(--accent);background:var(--bg3)}
+.voice-card.active{border-color:var(--accent);background:var(--accent-glow);
+  box-shadow:0 0 16px var(--accent-glow)}
+.voice-card .emoji{font-size:24px;margin-bottom:6px}
+.voice-card .name{font-size:13px;font-weight:600}
+.voice-card .lang{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* Design presets */
+.preset-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:16px}
+.preset-chip{padding:8px 14px;background:var(--bg);border:1px solid var(--border);
+  border-radius:20px;font-size:13px;cursor:pointer;text-align:center;transition:all .2s}
+.preset-chip:hover{border-color:var(--accent)}
+.preset-chip.active{border-color:var(--accent);background:var(--accent-glow);color:var(--accent)}
+
+/* Toggle */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;
+  padding:12px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border-bottom:none}
+.toggle-label{font-size:14px}
+.toggle-desc{font-size:12px;color:var(--text3);margin-top:2px}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle .slider{position:absolute;inset:0;background:var(--bg4);border-radius:12px;
+  cursor:pointer;transition:background .2s}
+.toggle .slider::before{content:"";position:absolute;left:3px;top:3px;
+  width:18px;height:18px;background:var(--text3);border-radius:50%;transition:all .2s}
+.toggle input:checked+.slider{background:var(--accent)}
+.toggle input:checked+.slider::before{transform:translateX(20px);background:#fff}
+
+/* Preview area */
+.preview-area{margin-top:16px;padding:16px;background:var(--bg);border-radius:var(--radius-sm);
+  border:1px solid var(--border);display:none}
+.preview-area.show{display:block}
+.preview-area audio{width:100%;height:40px}
+.preview-text{margin-bottom:12px}
+
+/* Connection info */
+.conn-info{padding:16px;background:var(--bg);border-radius:var(--radius-sm);
+  border:1px solid var(--border);font-family:"SF Mono",Monaco,Consolas,monospace;font-size:13px;line-height:1.8}
+.conn-info .label{color:var(--text3)}
+.conn-info .value{color:var(--accent)}
+.conn-info .copy{cursor:pointer;padding:2px 6px;background:var(--bg4);border:1px solid var(--border);
+  border-radius:4px;font-size:11px;color:var(--text2)}
+.conn-info .copy:hover{border-color:var(--accent);color:var(--accent)}
+
+/* Toast */
+.toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:var(--radius-sm);
+  font-size:13px;font-weight:500;z-index:1000;animation:slideIn .3s ease;
+  box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.toast.ok{background:var(--green);color:#fff}
+.toast.err{background:var(--red);color:#fff}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* Loading spinner */
+.spinner{width:16px;height:16px;border:2px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Responsive */
+@media(max-width:600px){
+  .app{padding:16px 12px}
+  .voice-grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
+  .preset-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">🎙️</div>
+    <div>
+      <h1>MiMo TTS Proxy</h1>
+      <p>小米 MiMo TTS API 中转服务</p>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div class="status-bar" id="statusBar">
+    <div class="status-dot off" id="statusDot"></div>
+    <span class="status-text" id="statusText">检查连接中...</span>
+  </div>
+
+  <!-- API Key -->
+  <div class="card">
+    <div class="card-title"><div class="icon">🔑</div> API 配置</div>
+    <label for="apiKey">API Key</label>
+    <div style="display:flex;gap:8px">
+      <input type="password" id="apiKey" placeholder="sk-xxxxxxxx" style="flex:1">
+      <button class="btn btn-secondary btn-sm" onclick="toggleKeyVisibility()">👁</button>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;align-items:end">
+      <div style="flex:1">
+        <label for="apiHost">API 地址</label>
+        <input type="text" id="apiHost" value="https://api.xiaomimimo.com">
+      </div>
+      <div style="flex:1">
+        <label for="model">模型</label>
+        <input type="text" id="model" value="mimo-tts-01">
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn btn-primary btn-sm" onclick="saveApiConfig()">保存配置</button>
+      <button class="btn btn-secondary btn-sm" onclick="testConnection()">测试连接</button>
+    </div>
+  </div>
+
+  <!-- Voice Selection -->
+  <div class="card">
+    <div class="card-title"><div class="icon">🎭</div> 音色选择</div>
+    <div class="voice-grid" id="voiceGrid"></div>
+  </div>
+
+  <!-- Voice Design -->
+  <div class="card">
+    <div class="card-title"><div class="icon">🎨</div> 语音设计</div>
+    <div class="preset-grid" id="presetGrid"></div>
+    <label for="customInstruction">自定义语音指令</label>
+    <textarea id="customInstruction" placeholder="描述你想要的声音风格，例如：声音低沉有力，像新闻主播一样字正腔圆"></textarea>
+    <div style="margin-top:8px;font-size:12px;color:var(--text3)">
+      💡 选择预设或输入自定义指令，应用于所有合成请求
+    </div>
+  </div>
+
+  <!-- Preview -->
+  <div class="card">
+    <div class="card-title"><div class="icon">🔊</div> 预览试听</div>
+    <div class="preview-text">
+      <label for="previewText">预览文本</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="previewText" value="你好，我是小米的语音助手，很高兴认识你！" style="flex:1">
+        <button class="btn btn-primary btn-sm" onclick="previewVoice()" id="previewBtn">试听</button>
+      </div>
+    </div>
+    <div class="preview-area" id="previewArea">
+      <audio id="previewAudio" controls></audio>
+    </div>
+  </div>
+
+  <!-- Connection Guide -->
+  <div class="card">
+    <div class="card-title"><div class="icon">📖</div> SillyTavern 连接指南</div>
+    <div class="conn-info">
+      <div><span class="label">Provider:</span> <span class="value">OpenAI Compatible</span></div>
+      <div><span class="label">Endpoint:</span> <span class="value" id="connEndpoint">http://127.0.0.1:5120/v1/audio/speech</span>
+        <span class="copy" onclick="copyEndpoint()">复制</span>
+      </div>
+      <div><span class="label">Model:</span> <span class="value">mimo-tts-01</span></div>
+      <div><span class="label">Voice:</span> <span class="value">冰糖 / 茉莉 / ...</span></div>
+    </div>
+    <div style="margin-top:12px;font-size:12px;color:var(--text3);line-height:1.6">
+      1. 酒馆 TTS 设置 → 选择 <b>OpenAI Compatible</b><br>
+      2. Provider Endpoint 填上面的地址<br>
+      3. Model 填 <code>mimo-tts-01</code><br>
+      4. Voice 填音色名（如 <code>冰糖</code>）<br>
+      5. API Key 留空（由代理服务管理）
+    </div>
+  </div>
+
+  <!-- Server Settings -->
+  <div class="card">
+    <div class="card-title"><div class="icon">⚙️</div> 服务设置</div>
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-label">局域网监听</div>
+        <div class="toggle-desc">允许同一网络的其他设备访问（0.0.0.0）</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="listenLan" onchange="saveLanSetting()">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-label">监听端口</div>
+        <div class="toggle-desc">修改后需重启服务</div>
+      </div>
+      <input type="text" id="port" value="5120" style="width:100px;text-align:center" onchange="savePortSetting()">
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';  // same origin
+let state = { voice: '冰糖', designMode: '', designInstruction: '' };
+let voices = [], presets = [];
+
+// ── Init ──
+async function init() {
+  const [config, voiceData] = await Promise.all([
+    fetch(`${API}/api/config`).then(r => r.json()),
+    fetch(`${API}/api/voices`).then(r => r.json()),
+  ]);
+
+  voices = voiceData.voices;
+  presets = voiceData.design_presets;
+
+  // Fill config
+  document.getElementById('apiKey').value = '';
+  document.getElementById('apiHost').value = config.api_host || 'https://api.xiaomimimo.com';
+  document.getElementById('model').value = config.model || 'mimo-tts-01';
+  document.getElementById('listenLan').checked = config.listen_lan || false;
+  document.getElementById('port').value = config.port || 5120;
+
+  if (config.api_key_masked) {
+    document.getElementById('apiKey').placeholder = config.api_key_masked;
+  }
+
+  state.voice = config.default_voice || '冰糖';
+  state.designMode = config.voice_design_mode || '';
+  state.designInstruction = config.voice_design_instruction || '';
+  document.getElementById('customInstruction').value = state.designInstruction;
+
+  renderVoices();
+  renderPresets();
+  updateEndpoint();
+  testConnection();
+}
+
+// ── Render ──
+function renderVoices() {
+  const grid = document.getElementById('voiceGrid');
+  const emojis = ['🍬','🌸','👩‍🏫','💖','☀️','🧸','👑','🍯','👶','😎'];
+  grid.innerHTML = voices.map((v, i) => `
+    <div class="voice-card ${v.name === state.voice ? 'active' : ''}" onclick="selectVoice('${v.name}')">
+      <div class="emoji">${emojis[i] || '🎵'}</div>
+      <div class="name">${v.name}</div>
+      <div class="lang">${v.lang}</div>
+    </div>
+  `).join('');
+}
+
+function renderPresets() {
+  const grid = document.getElementById('presetGrid');
+  grid.innerHTML = presets.map(p => `
+    <div class="preset-chip ${p.name === state.designMode ? 'active' : ''}"
+         onclick="selectPreset('${p.name}', \`${p.instruction}\`)">${p.name}</div>
+  `).join('') + `
+    <div class="preset-chip ${state.designMode === 'custom' ? 'active' : ''}"
+         onclick="selectPreset('custom', '')">自定义</div>
+  `;
+}
+
+// ── Actions ──
+function selectVoice(name) {
+  state.voice = name;
+  renderVoices();
+}
+
+function selectPreset(name, instruction) {
+  state.designMode = name;
+  state.designInstruction = instruction || document.getElementById('customInstruction').value;
+  renderPresets();
+}
+
+async function saveApiConfig() {
+  const key = document.getElementById('apiKey').value;
+  const body = {
+    api_host: document.getElementById('apiHost').value,
+    model: document.getElementById('model').value,
+    default_voice: state.voice,
+    voice_design_mode: state.designMode,
+    voice_design_instruction: document.getElementById('customInstruction').value,
+  };
+  if (key) body.api_key = key;
+
+  await fetch(`${API}/api/config`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  toast('配置已保存', 'ok');
+  document.getElementById('apiKey').value = '';
+  init();
+}
+
+async function testConnection() {
+  const dot = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  dot.className = 'status-dot off';
+  text.textContent = '测试连接中...';
+
+  try {
+    const resp = await fetch(`${API}/api/test`);
+    const data = await resp.json();
+    if (data.ok) {
+      dot.className = 'status-dot ok';
+      text.textContent = `连接成功 ✅ (${data.size} bytes)`;
+    } else {
+      dot.className = 'status-dot err';
+      text.textContent = `连接失败: ${data.error}`;
+    }
+  } catch (e) {
+    dot.className = 'status-dot err';
+    text.textContent = `服务不可达: ${e.message}`;
+  }
+}
+
+async function previewVoice() {
+  const btn = document.getElementById('previewBtn');
+  const text = document.getElementById('previewText').value;
+  if (!text) return;
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+
+  const instruction = state.designMode === 'custom'
+    ? document.getElementById('customInstruction').value
+    : state.designInstruction;
+
+  try {
+    const resp = await fetch(`${API}/api/preview`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        voice: state.voice,
+        instruction,
+      }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(err.detail || 'Unknown error');
+    }
+
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const audio = document.getElementById('previewAudio');
+    audio.src = url;
+    document.getElementById('previewArea').classList.add('show');
+    audio.play();
+  } catch (e) {
+    toast(`预览失败: ${e.message}`, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '试听';
+  }
+}
+
+async function saveLanSetting() {
+  const checked = document.getElementById('listenLan').checked;
+  await fetch(`${API}/api/config`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ listen_lan: checked }),
+  });
+  updateEndpoint();
+  toast(checked ? '局域网监听已启用，重启后生效' : '已切换为仅本地监听', 'ok');
+}
+
+async function savePortSetting() {
+  const port = parseInt(document.getElementById('port').value) || 5120;
+  await fetch(`${API}/api/config`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ port }),
+  });
+  updateEndpoint();
+  toast('端口已保存，重启后生效', 'ok');
+}
+
+function updateEndpoint() {
+  const lan = document.getElementById('listenLan').checked;
+  const port = document.getElementById('port').value || 5120;
+  const host = lan ? getLocalIP() : '127.0.0.1';
+  document.getElementById('connEndpoint').textContent = `http://${host}:${port}/v1/audio/speech`;
+}
+
+function getLocalIP() {
+  // Returns a hint; actual LAN IP depends on the network
+  const ips = ['192.168.x.x', '10.x.x.x'];
+  return ips[0]; // placeholder
+}
+
+function copyEndpoint() {
+  const text = document.getElementById('connEndpoint').textContent;
+  navigator.clipboard.writeText(text);
+  toast('已复制到剪贴板', 'ok');
+}
+
+function toggleKeyVisibility() {
+  const input = document.getElementById('apiKey');
+  input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+// ── Toast ──
+function toast(msg, type = 'ok') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2500);
+}
+
+// ── Custom instruction live sync ──
+document.getElementById('customInstruction').addEventListener('input', function () {
+  state.designInstruction = this.value;
+});
+
+// ── Start ──
+init();
+</script>
+</body>
+</html>
