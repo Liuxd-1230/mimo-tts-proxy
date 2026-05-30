@@ -209,7 +209,7 @@ async def call_mimo_tts(
         "audio": audio_obj,
     }
 
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=180) as client:
         resp = await client.post(url, json=payload, headers=headers)
 
     if resp.status_code != 200:
