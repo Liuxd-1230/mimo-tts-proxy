@@ -25,7 +25,7 @@ CONFIG_FILE = CONFIG_DIR / "config.json"
 DEFAULT_CONFIG = {
     "api_host": "https://api.xiaomimimo.com",
     "api_key": "",
-    "model": "mimo-tts-01",
+    "model": "mimo-v2.5-tts",
     "default_voice": "冰糖",
     "voice_design_mode": "",
     "voice_design_instruction": "",
@@ -65,6 +65,15 @@ app = FastAPI(title="MiMo TTS Proxy", version="1.0.0")
 STATIC_DIR = Path(__file__).parent / "static"
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+@app.get("/favicon.ico")
+async def favicon():
+    from fastapi.responses import FileResponse
+    icon = STATIC_DIR / "favicon.ico"
+    if icon.exists():
+        return FileResponse(icon)
+    return Response(status_code=204)
 
 # 全局配置
 config: dict = {}
@@ -195,7 +204,7 @@ async def list_models():
     return {
         "object": "list",
         "data": [
-            {"id": "mimo-tts-01", "object": "model", "owned_by": "xiaomi"},
+            {"id": "mimo-v2.5-tts", "object": "model", "owned_by": "xiaomi"},
         ],
     }
 

@@ -30,7 +30,7 @@ python main.py --port 8080  # 自定义端口
 2. 打开酒馆 → TTS 设置 → Provider 选择 **OpenAI Compatible**
 3. 填写：
    - **Provider Endpoint:** `http://127.0.0.1:5120/v1/audio/speech`
-   - **Model:** `mimo-tts-01`
+   - **Model:** `mimo-v2.5-tts`
    - **Voice:** `冰糖`（或其他音色名）
    - **API Key:** 留空（由代理服务管理）
 
