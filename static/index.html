@@ -345,7 +345,7 @@ function renderPresets(){
 
 // ── Actions ──
 function selVoice(n){S.voice=n;renderVoices()}
-function selPreset(n instr){S.designMode=n;S.designInstr=instr||document.getElementById('customInstr').value;renderPresets()}
+function selPreset(n,instr){S.designMode=n;S.designInstr=instr||document.getElementById('customInstr').value;renderPresets()}
 
 async function saveApiConfig(){
   const key=document.getElementById('apiKey').value;
