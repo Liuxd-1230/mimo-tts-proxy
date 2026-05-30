@@ -4,143 +4,159 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MiMo TTS Proxy</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
-  --bg:#0d0d1a;--bg2:#13132a;--bg3:#1a1a2e;--bg4:#222244;
-  --accent:#6c63ff;--accent2:#8b7dff;--accent-glow:rgba(108,99,255,.25);
-  --text:#e8e8f0;--text2:#a0a0c0;--text3:#666688;
-  --border:#2a2a4a;--border2:#333366;
-  --green:#22c55e;--red:#ef4444;--orange:#f59e0b;
-  --radius:12px;--radius-sm:8px;
+  --bg:#e0e5ec;--bg-dark:#c8ccd4;
+  --shadow-light:#ffffff;--shadow-dark:#a3b1c6;
+  --accent:#6c63ff;--accent-soft:#8b7dff;
+  --text:#2d3436;--text2:#636e72;--text3:#b2bec3;
+  --green:#00b894;--red:#d63031;--orange:#fdcb6e;
+  --radius:16px;--radius-sm:12px;--radius-xs:8px;
 }
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-  background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--text);min-height:100vh}
 ::selection{background:var(--accent);color:#fff}
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb{background:var(--shadow-dark);border-radius:3px}
+
+/* Neumorphism helpers */
+.neu{background:var(--bg);border-radius:var(--radius);
+  box-shadow:8px 8px 16px var(--shadow-dark),-8px -8px 16px var(--shadow-light)}
+.neu-inset{background:var(--bg);border-radius:var(--radius-sm);
+  box-shadow:inset 4px 4px 8px var(--shadow-dark),inset -4px -4px 8px var(--shadow-light)}
+.neu-sm{background:var(--bg);border-radius:var(--radius-xs);
+  box-shadow:4px 4px 8px var(--shadow-dark),-4px -4px 8px var(--shadow-light)}
+.neu-btn{background:var(--bg);border:none;border-radius:var(--radius-xs);
+  box-shadow:4px 4px 8px var(--shadow-dark),-4px -4px 8px var(--shadow-light);
+  cursor:pointer;transition:all .15s;color:var(--text);font-size:13px;font-weight:600}
+.neu-btn:active{box-shadow:inset 3px 3px 6px var(--shadow-dark),inset -3px -3px 6px var(--shadow-light)}
+.neu-btn.primary{color:var(--accent)}
+.neu-btn:disabled{opacity:.4;cursor:not-allowed}
 
 /* Layout */
-.app{max-width:960px;margin:0 auto;padding:24px 20px}
-.header{display:flex;align-items:center;gap:14px;margin-bottom:32px}
-.header .logo{width:42px;height:42px;border-radius:10px;
-  background:linear-gradient(135deg,var(--accent),#9b59b6);
-  display:flex;align-items:center;justify-content:center;font-size:20px;
-  box-shadow:0 4px 20px var(--accent-glow)}
+.app{max-width:720px;margin:0 auto;padding:32px 20px}
+.header{display:flex;align-items:center;gap:16px;margin-bottom:32px}
+.header .logo{width:48px;height:48px;border-radius:14px;
+  box-shadow:6px 6px 12px var(--shadow-dark),-6px -6px 12px var(--shadow-light);
+  display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,var(--accent),#9b59b6);color:#fff;font-size:22px}
 .header h1{font-size:22px;font-weight:700;letter-spacing:-.5px}
 .header p{font-size:13px;color:var(--text2);margin-top:2px}
 
-/* Cards */
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
-  padding:24px;margin-bottom:20px;transition:border-color .2s}
-.card:hover{border-color:var(--border2)}
-.card-title{font-size:15px;font-weight:600;margin-bottom:16px;
-  display:flex;align-items:center;gap:8px}
-.card-title .icon{width:28px;height:28px;border-radius:var(--radius-sm);
-  background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:14px}
-
-/* Form elements */
-label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px;font-weight:500}
-input[type=text],input[type=password],textarea,select{
-  width:100%;padding:10px 14px;background:var(--bg);border:1px solid var(--border);
-  border-radius:var(--radius-sm);color:var(--text);font-size:14px;
-  transition:border-color .2s,box-shadow .2s;outline:none}
-input:focus,textarea:focus,select:focus{border-color:var(--accent);
-  box-shadow:0 0 0 3px var(--accent-glow)}
-textarea{resize:vertical;min-height:80px;font-family:inherit}
-select{cursor:pointer;appearance:none;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23a0a0c0'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:right 12px center;
-  padding-right:32px}
-
-/* Buttons */
-.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;
-  border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;
-  cursor:pointer;transition:all .2s}
-.btn-primary{background:var(--accent);color:#fff}
-.btn-primary:hover{background:var(--accent2);box-shadow:0 4px 16px var(--accent-glow)}
-.btn-secondary{background:var(--bg4);color:var(--text);border:1px solid var(--border)}
-.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
-.btn-sm{padding:6px 14px;font-size:12px}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-
 /* Status */
-.status-bar{display:flex;align-items:center;gap:10px;padding:12px 16px;
-  background:var(--bg3);border-radius:var(--radius-sm);margin-bottom:20px}
-.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.status-dot.ok{background:var(--green);box-shadow:0 0 8px rgba(34,197,94,.5)}
-.status-dot.err{background:var(--red);box-shadow:0 0 8px rgba(239,68,68,.5)}
+.status-bar{display:flex;align-items:center;gap:12px;padding:14px 18px;margin-bottom:24px}
+.status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;
+  box-shadow:0 0 8px rgba(0,0,0,.15)}
+.status-dot.ok{background:var(--green)}
+.status-dot.err{background:var(--red)}
 .status-dot.off{background:var(--text3)}
 .status-text{font-size:13px;color:var(--text2)}
 
-/* Voice grid */
-.voice-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
-.voice-card{padding:14px;background:var(--bg);border:2px solid var(--border);
-  border-radius:var(--radius-sm);cursor:pointer;transition:all .2s;text-align:center}
-.voice-card:hover{border-color:var(--accent);background:var(--bg3)}
-.voice-card.active{border-color:var(--accent);background:var(--accent-glow);
-  box-shadow:0 0 16px var(--accent-glow)}
-.voice-card .emoji{font-size:24px;margin-bottom:6px}
-.voice-card .name{font-size:13px;font-weight:600}
-.voice-card .lang{font-size:11px;color:var(--text3);margin-top:2px}
+/* Card */
+.card{padding:24px;margin-bottom:20px}
+.card-title{font-size:15px;font-weight:700;margin-bottom:18px;
+  display:flex;align-items:center;gap:10px;color:var(--text)}
+.card-title i{font-size:18px;color:var(--accent)}
 
-/* Design presets */
-.preset-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:16px}
-.preset-chip{padding:8px 14px;background:var(--bg);border:1px solid var(--border);
-  border-radius:20px;font-size:13px;cursor:pointer;text-align:center;transition:all .2s}
-.preset-chip:hover{border-color:var(--accent)}
-.preset-chip.active{border-color:var(--accent);background:var(--accent-glow);color:var(--accent)}
+/* Form */
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;color:var(--text2);margin-bottom:6px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.5px}
+.neu-input{width:100%;padding:11px 14px;border:none;outline:none;font-size:14px;color:var(--text);
+  background:var(--bg);border-radius:var(--radius-xs);
+  box-shadow:inset 3px 3px 6px var(--shadow-dark),inset -3px -3px 6px var(--shadow-light)}
+.neu-input:focus{box-shadow:inset 3px 3px 6px var(--shadow-dark),inset -3px -3px 6px var(--shadow-light),
+  0 0 0 2px var(--accent)}
+textarea.neu-input{resize:vertical;min-height:72px;font-family:inherit;line-height:1.5}
+.neu-select{width:100%;padding:11px 14px;border:none;outline:none;font-size:14px;color:var(--text);
+  background:var(--bg);border-radius:var(--radius-xs);cursor:pointer;
+  box-shadow:inset 3px 3px 6px var(--shadow-dark),inset -3px -3px 6px var(--shadow-light);
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23636e72'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.row{display:flex;gap:12px}
+.row>*{flex:1}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:10px 20px;font-size:13px;font-weight:600}
+.btn i{font-size:15px}
+.btn-group{display:flex;gap:10px;margin-top:14px}
+
+/* Voice grid */
+.voice-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:12px}
+.voice-card{padding:16px 8px;cursor:pointer;text-align:center;transition:all .15s}
+.voice-card:hover{transform:translateY(-2px)}
+.voice-card.active{box-shadow:inset 4px 4px 8px var(--shadow-dark),inset -4px -4px 8px var(--shadow-light);
+  color:var(--accent)}
+.voice-card i{font-size:26px;margin-bottom:8px;display:block;color:var(--accent)}
+.voice-card .name{font-size:12px;font-weight:700}
+.voice-card .lang{font-size:10px;color:var(--text3);margin-top:2px}
+
+/* Preset chips */
+.preset-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.preset-chip{padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;gap:5px;color:var(--text2)}
+.preset-chip i{font-size:14px}
+.preset-chip:hover{color:var(--accent)}
+.preset-chip.active{color:var(--accent);
+  box-shadow:inset 3px 3px 6px var(--shadow-dark),inset -3px -3px 6px var(--shadow-light)}
 
 /* Toggle */
 .toggle-row{display:flex;align-items:center;justify-content:space-between;
-  padding:12px 0;border-bottom:1px solid var(--border)}
+  padding:14px 0;border-bottom:1px solid rgba(0,0,0,.06)}
 .toggle-row:last-child{border-bottom:none}
-.toggle-label{font-size:14px}
-.toggle-desc{font-size:12px;color:var(--text3);margin-top:2px}
-.toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle-info .label{font-size:14px;font-weight:600}
+.toggle-info .desc{font-size:12px;color:var(--text3);margin-top:2px}
+.toggle{position:relative;width:48px;height:26px;flex-shrink:0}
 .toggle input{opacity:0;width:0;height:0}
-.toggle .slider{position:absolute;inset:0;background:var(--bg4);border-radius:12px;
-  cursor:pointer;transition:background .2s}
+.toggle .slider{position:absolute;inset:0;border-radius:13px;cursor:pointer;transition:all .25s;
+  box-shadow:inset 3px 3px 6px var(--shadow-dark),inset -3px -3px 6px var(--shadow-light)}
 .toggle .slider::before{content:"";position:absolute;left:3px;top:3px;
-  width:18px;height:18px;background:var(--text3);border-radius:50%;transition:all .2s}
-.toggle input:checked+.slider{background:var(--accent)}
-.toggle input:checked+.slider::before{transform:translateX(20px);background:#fff}
+  width:20px;height:20px;border-radius:50%;transition:all .25s;
+  box-shadow:2px 2px 4px var(--shadow-dark),-1px -1px 3px var(--shadow-light);
+  background:var(--bg)}
+.toggle input:checked+.slider{background:var(--accent);
+  box-shadow:inset 2px 2px 4px rgba(0,0,0,.15),inset -1px -1px 2px rgba(255,255,255,.1)}
+.toggle input:checked+.slider::before{transform:translateX(22px);background:#fff}
 
-/* Preview area */
-.preview-area{margin-top:16px;padding:16px;background:var(--bg);border-radius:var(--radius-sm);
-  border:1px solid var(--border);display:none}
+/* Preview */
+.preview-area{margin-top:16px;padding:16px;display:none}
 .preview-area.show{display:block}
-.preview-area audio{width:100%;height:40px}
-.preview-text{margin-bottom:12px}
+.preview-area audio{width:100%;height:36px}
 
-/* Connection info */
-.conn-info{padding:16px;background:var(--bg);border-radius:var(--radius-sm);
-  border:1px solid var(--border);font-family:"SF Mono",Monaco,Consolas,monospace;font-size:13px;line-height:1.8}
-.conn-info .label{color:var(--text3)}
-.conn-info .value{color:var(--accent)}
-.conn-info .copy{cursor:pointer;padding:2px 6px;background:var(--bg4);border:1px solid var(--border);
-  border-radius:4px;font-size:11px;color:var(--text2)}
-.conn-info .copy:hover{border-color:var(--accent);color:var(--accent)}
+/* Conn info */
+.conn-info{padding:16px;font-family:"SF Mono",Monaco,Consolas,monospace;font-size:13px;line-height:2}
+.conn-row{display:flex;align-items:center;gap:8px}
+.conn-label{color:var(--text3);min-width:80px}
+.conn-value{color:var(--accent);font-weight:600}
+.conn-copy{cursor:pointer;padding:3px 8px;font-size:11px;font-weight:600;color:var(--text2);
+  border-radius:4px;transition:all .15s}
+.conn-copy:hover{color:var(--accent);background:rgba(108,99,255,.1)}
 
 /* Toast */
-.toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:var(--radius-sm);
-  font-size:13px;font-weight:500;z-index:1000;animation:slideIn .3s ease;
-  box-shadow:0 8px 32px rgba(0,0,0,.4)}
-.toast.ok{background:var(--green);color:#fff}
-.toast.err{background:var(--red);color:#fff}
-@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast{position:fixed;top:24px;right:24px;padding:14px 22px;
+  border-radius:var(--radius-xs);font-size:13px;font-weight:600;z-index:1000;
+  animation:toastIn .3s ease;display:flex;align-items:center;gap:8px;
+  box-shadow:6px 6px 12px var(--shadow-dark),-6px -6px 12px var(--shadow-light);background:var(--bg)}
+.toast i{font-size:16px}
+.toast.ok i{color:var(--green)}
+.toast.err i{color:var(--red)}
+@keyframes toastIn{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}
 
-/* Loading spinner */
-.spinner{width:16px;height:16px;border:2px solid var(--border);
+/* Spinner */
+.spinner{width:14px;height:14px;border:2px solid var(--shadow-dark);
   border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* Responsive */
 @media(max-width:600px){
-  .app{padding:16px 12px}
-  .voice-grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
-  .preset-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}
+  .app{padding:20px 14px}
+  .voice-grid{grid-template-columns:repeat(auto-fill,minmax(85px,1fr))}
+  .row{flex-direction:column}
 }
 </style>
 </head>
@@ -148,337 +164,281 @@ select{cursor:pointer;appearance:none;
 <div class="app">
   <!-- Header -->
   <div class="header">
-    <div class="logo">🎙️</div>
+    <div class="logo"><i class="ri-mic-line"></i></div>
     <div>
       <h1>MiMo TTS Proxy</h1>
-      <p>小米 MiMo TTS API 中转服务</p>
+      <p>小米 MiMo 语音合成中转服务</p>
     </div>
   </div>
 
   <!-- Status -->
-  <div class="status-bar" id="statusBar">
+  <div class="status-bar neu">
     <div class="status-dot off" id="statusDot"></div>
     <span class="status-text" id="statusText">检查连接中...</span>
   </div>
 
-  <!-- API Key -->
-  <div class="card">
-    <div class="card-title"><div class="icon">🔑</div> API 配置</div>
-    <label for="apiKey">API Key</label>
-    <div style="display:flex;gap:8px">
-      <input type="password" id="apiKey" placeholder="sk-xxxxxxxx" style="flex:1">
-      <button class="btn btn-secondary btn-sm" onclick="toggleKeyVisibility()">👁</button>
-    </div>
-    <div style="margin-top:12px;display:flex;gap:8px;align-items:end">
-      <div style="flex:1">
-        <label for="apiHost">API 地址</label>
-        <input type="text" id="apiHost" value="https://api.xiaomimimo.com">
-      </div>
-      <div style="flex:1">
-        <label for="model">模型</label>
-        <input type="text" id="model" value="mimo-tts-01">
+  <!-- API Config -->
+  <div class="card neu">
+    <div class="card-title"><i class="ri-key-2-line"></i> API 配置</div>
+    <div class="form-group">
+      <label>API Key</label>
+      <div style="display:flex;gap:8px">
+        <input type="password" id="apiKey" class="neu-input" placeholder="sk-xxxxxxxx" style="flex:1">
+        <button class="neu-btn" onclick="toggleKeyVis()" style="width:42px;padding:0">
+          <i class="ri-eye-off-line" id="eyeIcon"></i>
+        </button>
       </div>
     </div>
-    <div style="margin-top:12px;display:flex;gap:8px">
-      <button class="btn btn-primary btn-sm" onclick="saveApiConfig()">保存配置</button>
-      <button class="btn btn-secondary btn-sm" onclick="testConnection()">测试连接</button>
+    <div class="row">
+      <div class="form-group">
+        <label>API 地址</label>
+        <input type="text" id="apiHost" class="neu-input" value="https://api.xiaomimimo.com">
+      </div>
+      <div class="form-group">
+        <label>模型</label>
+        <input type="text" id="model" class="neu-input" value="mimo-tts-01">
+      </div>
+    </div>
+    <div class="btn-group">
+      <button class="neu-btn primary btn" onclick="saveApiConfig()"><i class="ri-save-line"></i> 保存</button>
+      <button class="neu-btn btn" onclick="testConn()"><i class="ri-wifi-line"></i> 测试连接</button>
     </div>
   </div>
 
   <!-- Voice Selection -->
-  <div class="card">
-    <div class="card-title"><div class="icon">🎭</div> 音色选择</div>
+  <div class="card neu">
+    <div class="card-title"><i class="ri-user-voice-line"></i> 音色选择</div>
     <div class="voice-grid" id="voiceGrid"></div>
   </div>
 
   <!-- Voice Design -->
-  <div class="card">
-    <div class="card-title"><div class="icon">🎨</div> 语音设计</div>
+  <div class="card neu">
+    <div class="card-title"><i class="ri-palette-line"></i> 语音设计</div>
     <div class="preset-grid" id="presetGrid"></div>
-    <label for="customInstruction">自定义语音指令</label>
-    <textarea id="customInstruction" placeholder="描述你想要的声音风格，例如：声音低沉有力，像新闻主播一样字正腔圆"></textarea>
+    <div class="form-group" style="margin-bottom:0">
+      <label>自定义语音指令</label>
+      <textarea id="customInstr" class="neu-input"
+        placeholder="描述你想要的声音风格，例如：声音低沉有力，像新闻主播一样字正腔圆"></textarea>
+    </div>
     <div style="margin-top:8px;font-size:12px;color:var(--text3)">
-      💡 选择预设或输入自定义指令，应用于所有合成请求
+      <i class="ri-lightbulb-line"></i> 选择预设或输入自定义指令，应用于所有合成请求
     </div>
   </div>
 
   <!-- Preview -->
-  <div class="card">
-    <div class="card-title"><div class="icon">🔊</div> 预览试听</div>
-    <div class="preview-text">
-      <label for="previewText">预览文本</label>
-      <div style="display:flex;gap:8px">
-        <input type="text" id="previewText" value="你好，我是小米的语音助手，很高兴认识你！" style="flex:1">
-        <button class="btn btn-primary btn-sm" onclick="previewVoice()" id="previewBtn">试听</button>
-      </div>
+  <div class="card neu">
+    <div class="card-title"><i class="ri-volume-up-line"></i> 预览试听</div>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="previewText" class="neu-input" value="你好，我是小米的语音助手，很高兴认识你！" style="flex:1">
+      <button class="neu-btn primary btn" onclick="preview()" id="previewBtn" style="white-space:nowrap">
+        <i class="ri-play-circle-line"></i> 试听
+      </button>
     </div>
-    <div class="preview-area" id="previewArea">
+    <div class="preview-area neu-inset" id="previewArea">
       <audio id="previewAudio" controls></audio>
     </div>
   </div>
 
   <!-- Connection Guide -->
-  <div class="card">
-    <div class="card-title"><div class="icon">📖</div> SillyTavern 连接指南</div>
-    <div class="conn-info">
-      <div><span class="label">Provider:</span> <span class="value">OpenAI Compatible</span></div>
-      <div><span class="label">Endpoint:</span> <span class="value" id="connEndpoint">http://127.0.0.1:5120/v1/audio/speech</span>
-        <span class="copy" onclick="copyEndpoint()">复制</span>
+  <div class="card neu">
+    <div class="card-title"><i class="ri-book-open-line"></i> SillyTavern 连接指南</div>
+    <div class="conn-info neu-inset">
+      <div class="conn-row"><span class="conn-label">Provider</span><span class="conn-value">OpenAI Compatible</span></div>
+      <div class="conn-row"><span class="conn-label">Endpoint</span>
+        <span class="conn-value" id="connEp">http://127.0.0.1:5120/v1/audio/speech</span>
+        <span class="conn-copy" onclick="copyEp()"><i class="ri-file-copy-line"></i></span>
       </div>
-      <div><span class="label">Model:</span> <span class="value">mimo-tts-01</span></div>
-      <div><span class="label">Voice:</span> <span class="value">冰糖 / 茉莉 / ...</span></div>
+      <div class="conn-row"><span class="conn-label">Model</span><span class="conn-value">mimo-tts-01</span></div>
+      <div class="conn-row"><span class="conn-label">Voice</span><span class="conn-value">冰糖 / 茉莉 / ...</span></div>
     </div>
-    <div style="margin-top:12px;font-size:12px;color:var(--text3);line-height:1.6">
-      1. 酒馆 TTS 设置 → 选择 <b>OpenAI Compatible</b><br>
-      2. Provider Endpoint 填上面的地址<br>
-      3. Model 填 <code>mimo-tts-01</code><br>
-      4. Voice 填音色名（如 <code>冰糖</code>）<br>
-      5. API Key 留空（由代理服务管理）
+    <div style="margin-top:12px;font-size:12px;color:var(--text3);line-height:1.8">
+      <i class="ri-checkbox-circle-line" style="color:var(--green)"></i> 酒馆 TTS → OpenAI Compatible<br>
+      <i class="ri-checkbox-circle-line" style="color:var(--green)"></i> Endpoint 填上面地址<br>
+      <i class="ri-checkbox-circle-line" style="color:var(--green)"></i> Model 填 <code>mimo-tts-01</code><br>
+      <i class="ri-checkbox-circle-line" style="color:var(--green)"></i> Voice 填音色名（如 <code>冰糖</code>）<br>
+      <i class="ri-checkbox-circle-line" style="color:var(--green)"></i> API Key 留空
     </div>
   </div>
 
   <!-- Server Settings -->
-  <div class="card">
-    <div class="card-title"><div class="icon">⚙️</div> 服务设置</div>
+  <div class="card neu">
+    <div class="card-title"><i class="ri-settings-3-line"></i> 服务设置</div>
     <div class="toggle-row">
-      <div>
-        <div class="toggle-label">局域网监听</div>
-        <div class="toggle-desc">允许同一网络的其他设备访问（0.0.0.0）</div>
+      <div class="toggle-info">
+        <div class="label"><i class="ri-global-line"></i> 局域网监听</div>
+        <div class="desc">允许同网络其他设备访问（0.0.0.0）</div>
       </div>
       <label class="toggle">
-        <input type="checkbox" id="listenLan" onchange="saveLanSetting()">
+        <input type="checkbox" id="listenLan" onchange="onLanToggle()">
         <span class="slider"></span>
       </label>
     </div>
     <div class="toggle-row">
-      <div>
-        <div class="toggle-label">监听端口</div>
-        <div class="toggle-desc">修改后需重启服务</div>
+      <div class="toggle-info">
+        <div class="label"><i class="ri-router-line"></i> 监听端口</div>
+        <div class="desc">修改后需重启服务</div>
       </div>
-      <input type="text" id="port" value="5120" style="width:100px;text-align:center" onchange="savePortSetting()">
+      <input type="text" id="port" class="neu-input" value="5120" style="width:90px;text-align:center" onchange="savePort()">
+    </div>
+    <div class="btn-group">
+      <button class="neu-btn btn" onclick="restartServer()" id="restartBtn" style="display:none">
+        <i class="ri-refresh-line"></i> 重启服务
+      </button>
     </div>
   </div>
 </div>
 
 <script>
-const API = '';  // same origin
-let state = { voice: '冰糖', designMode: '', designInstruction: '' };
-let voices = [], presets = [];
+const API='';
+let S={voice:'冰糖',designMode:'',designInstr:''};
+let voices=[],presets=[];
 
 // ── Init ──
-async function init() {
-  const [config, voiceData] = await Promise.all([
-    fetch(`${API}/api/config`).then(r => r.json()),
-    fetch(`${API}/api/voices`).then(r => r.json()),
+async function init(){
+  const[cfg,vd]=await Promise.all([
+    fetch(`${API}/api/config`).then(r=>r.json()),
+    fetch(`${API}/api/voices`).then(r=>r.json()),
   ]);
+  voices=vd.voices; presets=vd.design_presets;
 
-  voices = voiceData.voices;
-  presets = voiceData.design_presets;
+  document.getElementById('apiKey').value='';
+  document.getElementById('apiHost').value=cfg.api_host||'https://api.xiaomimimo.com';
+  document.getElementById('model').value=cfg.model||'mimo-tts-01';
+  document.getElementById('listenLan').checked=cfg.listen_lan||false;
+  document.getElementById('port').value=cfg.port||5120;
+  if(cfg.api_key_masked) document.getElementById('apiKey').placeholder=cfg.api_key_masked;
 
-  // Fill config
-  document.getElementById('apiKey').value = '';
-  document.getElementById('apiHost').value = config.api_host || 'https://api.xiaomimimo.com';
-  document.getElementById('model').value = config.model || 'mimo-tts-01';
-  document.getElementById('listenLan').checked = config.listen_lan || false;
-  document.getElementById('port').value = config.port || 5120;
+  S.voice=cfg.default_voice||'冰糖';
+  S.designMode=cfg.voice_design_mode||'';
+  S.designInstr=cfg.voice_design_instruction||'';
+  document.getElementById('customInstr').value=S.designInstr;
 
-  if (config.api_key_masked) {
-    document.getElementById('apiKey').placeholder = config.api_key_masked;
-  }
-
-  state.voice = config.default_voice || '冰糖';
-  state.designMode = config.voice_design_mode || '';
-  state.designInstruction = config.voice_design_instruction || '';
-  document.getElementById('customInstruction').value = state.designInstruction;
-
-  renderVoices();
-  renderPresets();
-  updateEndpoint();
-  testConnection();
+  renderVoices(); renderPresets(); updateEp(); testConn();
 }
 
 // ── Render ──
-function renderVoices() {
-  const grid = document.getElementById('voiceGrid');
-  const emojis = ['🍬','🌸','👩‍🏫','💖','☀️','🧸','👑','🍯','👶','😎'];
-  grid.innerHTML = voices.map((v, i) => `
-    <div class="voice-card ${v.name === state.voice ? 'active' : ''}" onclick="selectVoice('${v.name}')">
-      <div class="emoji">${emojis[i] || '🎵'}</div>
+function renderVoices(){
+  const icons=['ri-candy-line','ri-flower-line','ri-user-star-line','ri-heart-pulse-line',
+    'ri-sun-line','ri-bear-smile-line','ri-crown-line','ri-hand-heart-line',
+    'ri-baby-line','ri-goblet-line'];
+  document.getElementById('voiceGrid').innerHTML=voices.map((v,i)=>`
+    <div class="voice-card neu-sm${v.name===S.voice?' active':''}" onclick="selVoice('${v.name}')">
+      <i class="${icons[i]||'ri-mic-line'}"></i>
       <div class="name">${v.name}</div>
       <div class="lang">${v.lang}</div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-function renderPresets() {
-  const grid = document.getElementById('presetGrid');
-  grid.innerHTML = presets.map(p => `
-    <div class="preset-chip ${p.name === state.designMode ? 'active' : ''}"
-         onclick="selectPreset('${p.name}', \`${p.instruction}\`)">${p.name}</div>
-  `).join('') + `
-    <div class="preset-chip ${state.designMode === 'custom' ? 'active' : ''}"
-         onclick="selectPreset('custom', '')">自定义</div>
-  `;
+function renderPresets(){
+  const icons=['ri-movie-line','ri-podcast-line','ri-heart-line','ri-temp-hot-line',
+    'ri-megaphone-line','ri-ghost-line','ri-edit-2-line'];
+  document.getElementById('presetGrid').innerHTML=presets.map((p,i)=>`
+    <div class="preset-chip neu-sm${p.name===S.designMode?' active':''}"
+      onclick="selPreset('${p.name}',\`${p.instruction}\`)">
+      <i class="${icons[i]||'ri-magic-line'}"></i>${p.name}
+    </div>`).join('')+`
+    <div class="preset-chip neu-sm${S.designMode==='custom'?' active':''}"
+      onclick="selPreset('custom','')">
+      <i class="ri-edit-line"></i>自定义
+    </div>`;
 }
 
 // ── Actions ──
-function selectVoice(name) {
-  state.voice = name;
-  renderVoices();
-}
+function selVoice(n){S.voice=n;renderVoices()}
+function selPreset(n instr){S.designMode=n;S.designInstr=instr||document.getElementById('customInstr').value;renderPresets()}
 
-function selectPreset(name, instruction) {
-  state.designMode = name;
-  state.designInstruction = instruction || document.getElementById('customInstruction').value;
-  renderPresets();
-}
-
-async function saveApiConfig() {
-  const key = document.getElementById('apiKey').value;
-  const body = {
-    api_host: document.getElementById('apiHost').value,
-    model: document.getElementById('model').value,
-    default_voice: state.voice,
-    voice_design_mode: state.designMode,
-    voice_design_instruction: document.getElementById('customInstruction').value,
-  };
-  if (key) body.api_key = key;
-
-  await fetch(`${API}/api/config`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  toast('配置已保存', 'ok');
-  document.getElementById('apiKey').value = '';
+async function saveApiConfig(){
+  const key=document.getElementById('apiKey').value;
+  const body={api_host:document.getElementById('apiHost').value,
+    model:document.getElementById('model').value,default_voice:S.voice,
+    voice_design_mode:S.designMode,
+    voice_design_instruction:document.getElementById('customInstr').value};
+  if(key) body.api_key=key;
+  await fetch(`${API}/api/config`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  toast('配置已保存','ok');
+  document.getElementById('apiKey').value='';
   init();
 }
 
-async function testConnection() {
-  const dot = document.getElementById('statusDot');
-  const text = document.getElementById('statusText');
-  dot.className = 'status-dot off';
-  text.textContent = '测试连接中...';
-
-  try {
-    const resp = await fetch(`${API}/api/test`);
-    const data = await resp.json();
-    if (data.ok) {
-      dot.className = 'status-dot ok';
-      text.textContent = `连接成功 ✅ (${data.size} bytes)`;
-    } else {
-      dot.className = 'status-dot err';
-      text.textContent = `连接失败: ${data.error}`;
-    }
-  } catch (e) {
-    dot.className = 'status-dot err';
-    text.textContent = `服务不可达: ${e.message}`;
-  }
+async function testConn(){
+  const dot=document.getElementById('statusDot'),txt=document.getElementById('statusText');
+  dot.className='status-dot off'; txt.textContent='测试连接中...';
+  try{
+    const r=await fetch(`${API}/api/test`);const d=await r.json();
+    if(d.ok){dot.className='status-dot ok';txt.textContent=`连接成功 (${d.size} bytes)`}
+    else{dot.className='status-dot err';txt.textContent=`失败: ${d.error}`}
+  }catch(e){dot.className='status-dot err';txt.textContent=`不可达: ${e.message}`}
 }
 
-async function previewVoice() {
-  const btn = document.getElementById('previewBtn');
-  const text = document.getElementById('previewText').value;
-  if (!text) return;
-
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>';
-
-  const instruction = state.designMode === 'custom'
-    ? document.getElementById('customInstruction').value
-    : state.designInstruction;
-
-  try {
-    const resp = await fetch(`${API}/api/preview`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text,
-        voice: state.voice,
-        instruction,
-      }),
-    });
-
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
-      throw new Error(err.detail || 'Unknown error');
-    }
-
-    const blob = await resp.blob();
-    const url = URL.createObjectURL(blob);
-    const audio = document.getElementById('previewAudio');
-    audio.src = url;
-    document.getElementById('previewArea').classList.add('show');
-    audio.play();
-  } catch (e) {
-    toast(`预览失败: ${e.message}`, 'err');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '试听';
-  }
+async function preview(){
+  const btn=document.getElementById('previewBtn');
+  const text=document.getElementById('previewText').value;
+  if(!text)return;
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  const instr=S.designMode==='custom'?document.getElementById('customInstr').value:S.designInstr;
+  try{
+    const r=await fetch(`${API}/api/preview`,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text,voice:S.voice,instruction:instr})});
+    if(!r.ok){const e=await r.json().catch(()=>({detail:r.statusText}));throw new Error(e.detail)}
+    const blob=await r.blob();const url=URL.createObjectURL(blob);
+    const a=document.getElementById('previewAudio');a.src=url;
+    document.getElementById('previewArea').classList.add('show');a.play();
+  }catch(e){toast(`预览失败: ${e.message}`,'err')}
+  finally{btn.disabled=false;btn.innerHTML='<i class="ri-play-circle-line"></i> 试听'}
 }
 
-async function saveLanSetting() {
-  const checked = document.getElementById('listenLan').checked;
-  await fetch(`${API}/api/config`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ listen_lan: checked }),
-  });
-  updateEndpoint();
-  toast(checked ? '局域网监听已启用，重启后生效' : '已切换为仅本地监听', 'ok');
+async function onLanToggle(){
+  const checked=document.getElementById('listenLan').checked;
+  await fetch(`${API}/api/config`,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({listen_lan:checked})});
+  updateEp();
+  document.getElementById('restartBtn').style.display='inline-flex';
+  toast(checked?'已切换局域网，需重启生效':'已切换本地，需重启生效','ok');
 }
 
-async function savePortSetting() {
-  const port = parseInt(document.getElementById('port').value) || 5120;
-  await fetch(`${API}/api/config`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ port }),
-  });
-  updateEndpoint();
-  toast('端口已保存，重启后生效', 'ok');
+async function savePort(){
+  const port=parseInt(document.getElementById('port').value)||5120;
+  await fetch(`${API}/api/config`,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({port})});
+  updateEp();
+  document.getElementById('restartBtn').style.display='inline-flex';
+  toast('端口已保存，需重启生效','ok');
 }
 
-function updateEndpoint() {
-  const lan = document.getElementById('listenLan').checked;
-  const port = document.getElementById('port').value || 5120;
-  const host = lan ? getLocalIP() : '127.0.0.1';
-  document.getElementById('connEndpoint').textContent = `http://${host}:${port}/v1/audio/speech`;
+async function restartServer(){
+  toast('正在重启...','ok');
+  await fetch(`${API}/api/restart`,{method:'POST'}).catch(()=>{});
+  setTimeout(()=>{location.reload()},2000);
 }
 
-function getLocalIP() {
-  // Returns a hint; actual LAN IP depends on the network
-  const ips = ['192.168.x.x', '10.x.x.x'];
-  return ips[0]; // placeholder
+function updateEp(){
+  const lan=document.getElementById('listenLan').checked;
+  const port=document.getElementById('port').value||5120;
+  document.getElementById('connEp').textContent=lan?`http://192.168.x.x:${port}/v1/audio/speech`:`http://127.0.0.1:${port}/v1/audio/speech`;
 }
 
-function copyEndpoint() {
-  const text = document.getElementById('connEndpoint').textContent;
-  navigator.clipboard.writeText(text);
-  toast('已复制到剪贴板', 'ok');
+function copyEp(){
+  navigator.clipboard.writeText(document.getElementById('connEp').textContent);
+  toast('已复制','ok');
 }
 
-function toggleKeyVisibility() {
-  const input = document.getElementById('apiKey');
-  input.type = input.type === 'password' ? 'text' : 'password';
+function toggleKeyVis(){
+  const inp=document.getElementById('apiKey');
+  const icon=document.getElementById('eyeIcon');
+  if(inp.type==='password'){inp.type='text';icon.className='ri-eye-line'}
+  else{inp.type='password';icon.className='ri-eye-off-line'}
 }
 
-// ── Toast ──
-function toast(msg, type = 'ok') {
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.textContent = msg;
+// live sync custom instruction
+document.getElementById('customInstr').addEventListener('input',function(){S.designInstr=this.value});
+
+function toast(msg,type='ok'){
+  const el=document.createElement('div');el.className=`toast ${type}`;
+  el.innerHTML=`<i class="ri-${type==='ok'?'check':'error'}-warning-line"></i>${msg}`;
   document.body.appendChild(el);
-  setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2500);
+  setTimeout(()=>{el.style.opacity='0';setTimeout(()=>el.remove(),300)},2500);
 }
 
-// ── Custom instruction live sync ──
-document.getElementById('customInstruction').addEventListener('input', function () {
-  state.designInstruction = this.value;
-});
-
-// ── Start ──
 init();
 </script>
 </body>

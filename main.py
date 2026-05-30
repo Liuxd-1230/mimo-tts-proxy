@@ -297,6 +297,24 @@ async def test_connection():
         return {"ok": False, "error": str(e)}
 
 
+@app.post("/api/restart")
+async def restart_server():
+    """重启服务（通过重新执行当前进程）"""
+    import sys
+    import os
+
+    save_config()
+    # 延迟重启，让响应先返回
+    def do_restart():
+        import time
+        time.sleep(0.5)
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+
+    import threading
+    threading.Thread(target=do_restart, daemon=True).start()
+    return {"ok": True, "message": "正在重启..."}
+
+
 # ── 启动 ──────────────────────────────────────────────
 
 if __name__ == "__main__":
